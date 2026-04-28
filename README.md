@@ -375,24 +375,17 @@ Per [https://docs.polymarket.com/market-data/websocket/user-channel], the docume
 
 ```
 PENDING_SUBMIT
-  ├─> ACCEPTED
-  │     ├─> LIVE
-  │     │     ├─> MATCHED
-  │     │     │     ├─> MINED
-  │     │     │     │     └─> CONFIRMED
-  │     │     │     ├─> FAILED_SETTLEMENT
-  │     │     │     ├─> ROLLED_BACK
-  │     │     │     └─> RECONCILE_NEEDED
-  │     │     ├─> CANCEL_PENDING
-  │     │     │     ├─> CANCELLED
-  │     │     │     ├─> CANCEL_FAILED
-  │     │     │     └─> RECONCILE_NEEDED
-  │     │     ├─> EXPIRED
-  │     │     └─> RECONCILE_NEEDED
-  │     └─> REJECTED_AFTER_ACCEPTANCE
-  ├─> REJECTED
-  ├─> TIMEOUT
-  └─> UNKNOWN
+  └─ ACCEPTED ───┬─ OPEN ───┬─ PARTIALLY_FILLED
+  └─ REJECTED   │           │
+                │           ├─ CANCELED
+                │           │
+                │           └─ MATCHED ─── MINED ─── CONFIRMED
+                │                            │
+                │                            └─ ROLLED_BACK ─── FAILED
+                │
+                └─ EXPIRED
+
+  Orthogonal: UNKNOWN, RECONCILE_NEEDED
 ```
 
 `MATCHED -> MINED -> CONFIRMED `
@@ -411,17 +404,44 @@ But a production bot needs to handle the failure branches, and this is more impo
 
   A trade can show MATCHED within tens of milliseconds and reach CONFIRMED 2-3 seconds later — or reverted (this is the root cause of [ghost fill](https://github.com/OrderBookTrade/GhostGuard/blob/main/docs/ghost-fills-polymarket.md) ).
 
+* **Whether to poll tx hash**
+
+  WebSocket might drop, reorder, or arrive late, the reliable pattern is to  take the operator-reported tx hash from the MATCHED→MINED transition, poll Polygon RPC and read the `Trade` event emitted by the V2 exchange contract from the receipt logs.
+
   
-
-
-
-
-
-
 
 ## 6.Ghost fills: the risk that deserves the most respect
 
+I have previously written an article about using [GhostGuard](https://github.com/OrderBookTrade/GhostGuard/blob/main/docs/ghost-fills-polymarket.md) to handle ghost fills.
 
+> A **ghost fill** is a trade that appears matched and filled on the off-chain CLOB — your local state, the operator's UI, and even the WebSocket trade event all say it happened — 
+>
+> but on-chain settlement never lands successfully, and the position never changes. 
+>
+> The fill briefly shows in the book and your account, then disappears.
+
+
+
+The exact v2 behavior must be tested after launch.
+
+
+|Official v2 changes remove the old nonce model, which should address nonce-increment-specific failure modes, and add [100 block support](https://github.com/Polymarket/ctf-exchange-v2/blob/main/src/exchange/mixins/UserPausable.sol#L14-L38) for `UserPausable` 
+
+But removing nonce does not automatically prove that every ghost-fill-like state inconsistency is impossible.
+
+
+
+* **Does V2 fully solve ghost fills?** 
+
+  I think probably it eliminates the specific `incrementNonce` exploit, because the order struct no longer contains a nonce. 
+
+  The structural **off-chain-match / on-chain-settle gap remains,** and any new operator-side cancel mechanism (`pauseUser`/`unpauseUser`) introduces its own failure surface that cannot be evaluated until live. 
+
+  Treat your detection and reconciliation logic as **necessary regardless of V2** — the cost of running it is low, and the cost of being wrong is large.
+
+  
+
+**TODO** definitive judgment is to be validated after V2 launch
 
 ## 7. WebSocket, Order State, and Reconciliation
 
