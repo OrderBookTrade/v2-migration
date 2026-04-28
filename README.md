@@ -333,7 +333,31 @@ function isValidSignature(bytes32 _message, bytes memory _signature)
 
 
 
+* **`timestamp` issue**
 
+  V2 removes the`nonce` field from the order struct entirely, replacing it with a millisecond `timestamp` for uniqueness 
+
+  the migration docs also describe a new operator-side `pauseUser`/`unpauseUser` mechanism that replaces on-chain cancel, and whether *that* mechanism is asynchronous in a way that still admits a settlement-failure window .
+
+  * **TODO- to be validated after V2 launch**
+
+
+
+* **Builder credentials vs relayer keys, in V2 terms**
+
+​	V2 changes the Builder Program flow,  and V2 replaces the old builder authentication 	flow for order attribution with a native `builderCode` attached directly to each order.
+
+​	**builderCode**: attribution / revenue sharing / per-order builder field
+
+​	**relayer credentials**:gasless transaction / relayer authentication path
+
+​	
+
+The community OrderBookTrade [`rs-builder-relayer-client`](https://github.com/OrderBookTrade/rs-builder-relayer-client) README distinguishes a `builder` HMAC mode (gasless, not address-bound) from a `relayer_key` mode (address-bound, from `polymarket.com/settings`). 
+
+
+
+For market makers, relayer credentials may matter more because execution and settlement reliability matter more than attribution.
 
 
 
