@@ -443,7 +443,15 @@ But removing nonce does not automatically prove that every ghost-fill-like state
 
 **TODO** definitive judgment is to be validated after V2 launch
 
+
+
 ## 7. WebSocket, Order State, and Reconciliation
+
+**WebSocket is necessary.**
+
+But only websocket is not sufficient .
+
+
 
 
 
