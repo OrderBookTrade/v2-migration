@@ -523,28 +523,209 @@ First 24 hours: cap notional per order at 10–25% of normal limits, double reco
 
 ## 10.**From Zero to One: Practical Migration Path**
 
+Each step has a purpose, a check, common errors, and a success criterion.
 
+---
 
-#### 10.1  Step 1 —  Read official migration docs.
+**Step 1 — Read official migration docs.**
 
+***Purpose**:* establish ground truth, not third-party summaries.
 
+***Check**:* you have read `docs.polymarket.com/v2-migration` `docs.polymarket.com/resources/contracts`, the V2 changelog entries, and the Help Center cutover article.
+***Common errors**:* relying on community summaries (including this article) without reading the source. 
 
-#### 10.2 Step 2 —  Clone/install `clob-client-v2`
+***Success**:* you can name the V2 exchange addresses, the EIP-712 domain version, and the cutover time without looking them up.
 
+---
 
+**Step 2 — Clone/install `clob-client-v2`.** 
 
-#### 10.3 Step 3 — **Prepare wallet/credentials.** 
+***Purpose**:* get the V2 SDK in the dependency tree. 
 
+***Check**:* `npm install @polymarket/clob-client-v2 viem` (or the Python equivalent `py-clob-client-v2`); verify `package.json` has the new dep and the old `@polymarket/clob-client` and `@polymarket/builder-signing-sdk` are removed. 
 
+***Common errors**:* both packages installed simultaneously, importing from the V1 path by accident, version mismatch with viem. 
 
-#### 10.4 Step 4 — Confirm collateral / contract address
+***Success**:* `import { ClobClient } from "@polymarket/clob-client-v2"` resolves, build passes lint.
 
+---
 
+**Step 3 — Prepare wallet/credentials.** 
 
+***Purpose**:* know which key signs and which address holds funds. 
 
+***Check**:* you have your EOA private key in a secrets manager, your funder address (proxy/Safe/EOA), your `signatureType` (0/1/2), and your existing API key triplet `{ key, secret, passphrase }`. 
 
-## 11.Post-V2 Launch Verification Plan
+***Common errors:*** using a fresh EOA that is not associated with the existing proxy/Safe and getting balance mismatches; forgetting that V1 keys carry over and re-deriving unnecessarily. 
 
+***Success**:* L1 EIP-712 sign-in works against staging, L2 HMAC requests authenticate cleanly.
 
+---
 
-## 12.Conclusion
+**Step 4 — Confirm collateral / contract address.**
+
+ ***Purpose**:* avoid pasted-from-Discord traps.
+
+ ***Check**:* fetch `docs.polymarket.com/resources/contracts` directly; record` V2 CTF Exchange, Neg Risk Exchange, pUSD, CollateralOnramp, CollateralOfframp` addresses; cross-verify each on PolygonScan with a "Polymarket" label. 
+
+***Common errors:*** using V1 addresses, pasting an address with a single-character typo (the historical `0xaB45c54AB...` vs `0xaB45c5A4B...` is a documented example), trusting community cheatsheets without re-fetch. 
+
+***Success**:* every address in your config matches the official contracts page, byte-for-byte.
+
+---
+
+**Step 5 — Check balance/allowance.**
+
+ ***Purpose**:* ensure the funder address can actually trade. 
+
+***Check**:* on-chain balance of USDC.e and pUSD on funder address; allowance of USDC.e to CollateralOnramp; allowance of pUSD to V2 CTF Exchange (and Neg Risk if applicable). 
+
+***Common errors:*** allowance set to V1 contracts; allowance to onramp but not to exchange; pUSD held in EOA but funder pointed at proxy. 
+
+***Success**:* `balanceOf(funder)` and `allowance(funder, exchange)` return expected non-zero values for the token you actually intend to trade in.
+
+---
+
+**Step 6 — Initialize client.**
+
+ ***Purpose**:* get a fully-authenticated `ClobClient` against V2. 
+
+***Check**:* construct against staging host first, then production after cutover; pass `chain: Chain.POLYGON`; pass `creds`; pass `signatureType` and `funderAddress` explicitly if not EOA. 
+
+***Common errors:*** using `chainId` instead of `chain`; omitting `funderAddress` for proxy/Safe accounts; setting unsupported constructor params (`tickSizeTtlMs` is removed). 
+
+***Success**:* `client.getOk()` (or any unauthenticated GET equivalent) returns 200; an authenticated GET against `/orders` returns your historical orders.
+
+---
+
+**Step 7 — Query markets / order book.** 
+
+***Purpose**:* verify read-side wiring before write-side. 
+
+***Check**:* `getMarkets`, `getOrderBook(tokenId)` for a known liquid market, and `getClobMarketInfo(conditionID)` (V2 new). 
+
+***Common errors:*** token IDs mistakenly used as market IDs; tick-size mismatches when constructing test orders. 
+
+***Success**:* book returns non-empty bids and asks at expected tick sizes; market info returns fee config.
+
+---
+
+**Step 8 — Place tiny test order.**
+
+ ***Purpose**:* exercise the full signing → submission → ACK path. 
+
+***Check**:* construct GTC limit at a non-crossing price, $1–$5 notional; observe ACK; observe order on book via book query.
+
+***Common errors:*** invalid signature (wrong domain version, wrong verifyingContract, wrong signatureType); insufficient balance/allowance; tick-size violation. 
+
+***Success**:* order accepted, returned `order_id`, visible on book.
+
+---
+
+**Step 9 — Subscribe WebSocket updates.**
+
+ ***Purpose**:* validate the user channel is wired. 
+
+***Check**:* connect to `wss://ws-subscriptions-clob.polymarket.com` (V1 URL; V2 unchanged per migration FAQ); subscribe to user channel for your address; observe heartbeat; place another tiny order and watch for ACCEPTED then OPEN events. 
+
+***Common errors:*** wrong subscription topic, wrong auth on WS, dropped without reconnect logic.
+
+ ***Success**:* every state transition you trigger via REST is reflected on the WS within seconds.
+
+---
+
+**Step 10 — Confirm order state.**
+
+***Purpose**:* end-to-end state tracking.
+
+***Check**:* your local state machine updates correctly from the WS events for ACCEPTED, OPEN, MATCHED (if filled), MINED, CONFIRMED, CANCELED. 
+
+***Common errors:*** missing `RECONCILE_NEEDED` transitions; mutating state on optimistic events without a rollback path. 
+
+***Success:*** a planned out-of-order event (replayed) does not corrupt local state.
+
+---
+
+**Step 11 — Test cancel.** 
+
+***Purpose**:* the cancel path is asymmetric to the place path. 
+
+***Check:*** place, observe OPEN, cancel, observe canceled state on WS, confirm absence on REST snapshot. 
+
+***Common errors**:* cancel by stale client id; cancelling before ACCEPTED. 
+
+***Success**:* every cancel converges, no orphan orders left after a stress run.
+
+---
+
+**Step 12 — Test fill.**
+
+ ***Purpose**:* exercise the matching path. 
+
+***Check**:* place an aggressive order that crosses, observe MATCHED. 
+
+***Common errors:*** fee misaccounting (V2 fees are operator-set; do not pre-compute V1-style); wrong price math due to 6-decimal scaling on amounts (`$100 = 100_000_000`). 
+
+***Success:*** MATCHED event arrives, fill recorded in local log with matching server timestamp.
+
+---
+
+**Step 13 — Test settlement / CONFIRMED.** 
+
+***Purpose**:* confirm the on-chain leg works. 
+
+***Check**:* observe MATCHED → MINED → CONFIRMED on WS; independently verify the Trade event in V2 CTF Exchange logs via Polygon RPC against the tx hash. 
+
+***Common errors:*** assuming MATCHED is terminal; treating MINED as final; missing the on-chain check.
+
+ ***Success**:* on-chain log matches WS event; position changes by the expected amount.
+
+---
+
+**Step 14 — Reconciliation.** 
+
+***Purpose**:* catch ghost fills and dropped events. 
+
+***Check**:* reconciler runs every 30s, compares local fill log + server fill log + on-chain log; flags discrepancies; resolves by REST snapshot + on-chain RPC.
+
+ ***Common errors:*** reconciler not running; reconciler running but not actually flagging; reconciler flagging but bot ignoring `RECONCILE_NEEDED` orders.
+
+ ***Success:*** a deliberate forced disagreement (e.g., delete a local fill) is detected and surfaced within one cycle.
+
+---
+
+**Step 15 — Small flow live.**
+
+ ***Purpose**:* see how the system behaves under real adverse selection at small size. 
+
+***Check:*** run for ~24 hours at 10–25% of normal size; track ghost-fill count, RETRYING count, FAILED count, latency distributions. 
+
+***Common errors:*** scaling up before the dashboard is real; ignoring the first ghost-fill event as "noise." 
+
+***Success:*** zero unresolved discrepancies; latency distributions stable; ghost-fill incidence within tolerance.
+
+---
+
+**Step 16 — Full cutover.** 
+
+***Purpose:*** return to normal size after data supports it. 
+
+***Check:*** you have at least 24 hours of clean small-flow data; you have a documented kill-switch threshold; you have on-call coverage. 
+
+***Common errors:*** full size before reconciliation has been stress-tested; assuming V1 size limits port unchanged. 
+
+***Success:*** normal operation, dashboards green, kill switch armed.
+
+---
+
+**Step 17 — Keep kill switch + rollback plan.** 
+
+***Purpose:*** the migration is over but the operational risk isn't.
+
+ ***Check:*** kill switch tested in production at low size; rollback plan documents how to disable strategies, withdraw collateral, unwind positions; runbook for the most likely incidents (ghost fill spike, RPC failure, WS disconnect, operator outage). 
+
+***Common errors:*** shelving the kill switch once the migration "feels stable."
+
+ ***Success:*** kill switch fires correctly during a planned drill; rollback plan executes without error.
+
+## 
