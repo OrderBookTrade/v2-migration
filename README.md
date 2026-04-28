@@ -196,8 +196,6 @@ const client = new ClobClient({
 
 
 
-
-
 ## 2. Where builders and makers most commonly get stuck
 
 
