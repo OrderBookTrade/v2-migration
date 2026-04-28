@@ -363,6 +363,60 @@ For market makers, relayer credentials may matter more because execution and set
 
 ## 5.**Order lifecycle: SUBMIT, MATCH, MINED, CONFIRMED, FAILED**
 
+Per [https://docs.polymarket.com/market-data/websocket/user-channel], the documented states are:
+
+| Status      | Terminal | Description                                                  |
+| :---------- | :------- | :----------------------------------------------------------- |
+| `MATCHED`   | No       | Trade has been matched and sent to the executor service by the operator |
+| `MINED`     | No       | Trade observed to be mined into the chain, no finality threshold established |
+| `CONFIRMED` | Yes      | Trade has achieved strong probabilistic finality and was successful |
+| `RETRYING`  | No       | Trade transaction has failed (revert or reorg) and is being retried/resubmitted by the operator |
+| `FAILED`    | Yes      | Trade has failed and is not being retried                    |
+
+```
+PENDING_SUBMIT
+  ├─> ACCEPTED
+  │     ├─> LIVE
+  │     │     ├─> MATCHED
+  │     │     │     ├─> MINED
+  │     │     │     │     └─> CONFIRMED
+  │     │     │     ├─> FAILED_SETTLEMENT
+  │     │     │     ├─> ROLLED_BACK
+  │     │     │     └─> RECONCILE_NEEDED
+  │     │     ├─> CANCEL_PENDING
+  │     │     │     ├─> CANCELLED
+  │     │     │     ├─> CANCEL_FAILED
+  │     │     │     └─> RECONCILE_NEEDED
+  │     │     ├─> EXPIRED
+  │     │     └─> RECONCILE_NEEDED
+  │     └─> REJECTED_AFTER_ACCEPTANCE
+  ├─> REJECTED
+  ├─> TIMEOUT
+  └─> UNKNOWN
+```
+
+`MATCHED -> MINED -> CONFIRMED `
+
+the process is good !
+
+But a production bot needs to handle the failure branches, and this is more important.
+
+
+
+* **Why CLOB matching is fast but settlement is async**
+
+  Matching is a memory operation against an order book on Polymarket's servers
+
+  But on-chain settlement is a Polygon transaction subject to mempool, blockspace, gas, and contract revert risk
+
+  A trade can show MATCHED within tens of milliseconds and reach CONFIRMED 2-3 seconds later — or reverted (this is the root cause of [ghost fill](https://github.com/OrderBookTrade/GhostGuard/blob/main/docs/ghost-fills-polymarket.md) ).
+
+  
+
+
+
+
+
 
 
 ## 6.Ghost fills: the risk that deserves the most respect
