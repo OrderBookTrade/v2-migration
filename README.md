@@ -39,7 +39,7 @@ These are the failure modes that cause makers to lose money during exchange migr
 
 So  this guide focuses on the parts that actually break in production 
 
-> * **Proxy wallets (EIP1271 Support )** 
+> * **Proxy wallets (EIP1271 Support)** 
 > * **Signature types**
 > * **PUSD migration**
 > * **Order lifecycle**
@@ -99,7 +99,7 @@ At minimum, verify below setups
 
 
 
-## 3**.Collateral and Funding Path: USDC.e, pUSD, Wrap / Unwrap**
+## 3.Collateral and Funding Path: USDC.e, pUSD, Wrap / Unwrap
 
 
 
