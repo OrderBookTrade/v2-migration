@@ -1,4 +1,4 @@
-# Polymarket CLOB v2 Migration Guide
+# Polymarket CLOB V2 Migration Guide
 
 
 
@@ -91,7 +91,7 @@ At minimum, verify below setups
 
 
 
-## **1. What CLOB v2 Actually Changes**
+## **1. What CLOB V2 Actually Changes**
 
 
 
@@ -135,8 +135,8 @@ At minimum, verify below setups
 
 
 
-## 11. Post-V2 Launch Verification Plan
+## 11.Post-V2 Launch Verification Plan
 
 
 
-## 12. Conclusion
+## 12.Conclusion
