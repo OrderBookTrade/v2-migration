@@ -729,3 +729,61 @@ Each step has a purpose, a check, common errors, and a success criterion.
  ***Success:*** kill switch fires correctly during a planned drill; rollback plan executes without error.
 
 ## 
+
+
+
+## BTW, Need help with this?
+
+I'm Bruce — I run [OrderbookTrade]()(and have shipped the only public Rust V2 stack in the Polymarket ecosystem (rs-builder-relayer-client on crates.io, GhostGuard, polymarket-maker-rebate-tracker.orderbook.trade). 
+
+Three ways I can help:
+
+**1. scoping-call** **$300 for 30 min ·**
+
+```
+credit against any further work
+
+- I read your V1 integration before the call
+- On the call: which of the 6 known V2 doc gaps hit you, which approval targets you're missing, whether your signing path survives 4/28
+- Written follow-up within 24h: prioritized checklist, estimated surface area, go/no-go on whether you need me. 
+```
+
+
+**2. V2 full migration service — $2K–$5K**
+
+```
+
+Full read of your V1 integration against V2 spec
+Written gap analysis, exact fields + contract addresses + approval targets
+Tested repro of the gaps that apply to you
+One 90-min walkthrough; one async Q&A round
+Scope and price locked in writing after lane 01
+
+```
+
+
+
+**3. Rebate underpayment check — free.** 
+
+```
+https://polymarket-maker-rebate-tracker.orderbook.trade
+
+Drop your maker address, see if Polymarket has shorted you.
+```
+
+
+
+---
+
+
+
+DM on Telegram: https://t.me/IAmBaice
+
+DM on Discord: @Bruce. 
+DM on Twitter: https://x.com/iambaice
+
+---
+
+This article will be updated post-launch. 
+
+Subscribe nowhere; just check back.
