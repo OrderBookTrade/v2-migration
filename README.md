@@ -95,6 +95,33 @@ At minimum, verify below setups
 
 
 
+V2  change the [`on-chain exchange contracts`]( https://github.com/Polymarket/ctf-exchange-v2), the `EIP-712 signing domain`, the `on-chain order struct`, the `collateral token`, the `builder attribution mechanism` and the `SDK package` and `constructor shape`, all in a single coordinated cutover. 
+
+
+
+**Most V1 clients break because every signed order they produce will fail validation against the new exchange contract** 
+
+
+
+For a trading bot, these changes touch the entire execution pipeline.
+
+| Component                           | V1                                                           | V2                                                           |
+| ----------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| **CTF Exchange**                    | 0x4bFb41d5B3570DeFd03C39a9A4D8dE6Bd8B8982E                   | 0xE111180000d2663C0091e4f400237545B87B996B                   |
+| **Neg Risk CTFExchange**            | 0xC5d563A36AE78145C45a50134d48A1215220f80a                   | 0xe2222d279d744050d28e00520010520000310F59                   |
+| **EIP-712 Exchange domain version** | "1"                                                          | "2"                                                          |
+| **SDK Package**                     | @polymarket/clob-client<br />py-clob-client<br />rs-clob-client | @polymarket/clob-client-v2<br />py-clob-client-v2<br />rs-clob-client-v2 |
+| **Host**                            | https://clob.polymarket.com                                  | https://clob-v2.polymarket.com<br /><br />updated to https://clob.polymarket.com after cutover |
+| **Order struct**                    | nonce<br/>feeRateBps<br/>taker                               | timestamp<br/>metadata<br/>builder                           |
+
+
+
+
+
+
+
+
+
 ## 2. Where builders and makers most commonly get stuck
 
 
