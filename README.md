@@ -479,19 +479,35 @@ But only websocket is not sufficient .
 
   **<u>Trading infra is heavy because money is heavy.</u>**
 
-  
-
-
-
 
 
 
 
 ## 8. **Maker Launch Checklist**
 
-* Before 
-* During
-* After
+#### 8.1 Pre-launch
+
+Cancel all open V1 orders ahead of the maintenance window 
+
+They will be wiped anyway, but explicit cancel lets you reconcile your local state cleanly, and avoids any edge case where the wipe surfaces as ROLLED_BACK in your stream.
+
+The order book will be empty for a window post-resume regardless of whether matching is technically live.
+
+#### 8.2 During maintenance 
+
+<u>Trading is paused</u>
+
+Do not poll the CLOB at high frequency during the pause — it both wastes effort and risks tripping rate limits when service comes back. 
+
+Hold a watcher on a single status endpoint (or just on PolygonScan for V2 contract activity) to detect resume.
+
+
+
+#### 8.3 After cutover
+
+Keep size small, Increase reconciliation frequency.
+
+First 24 hours: cap notional per order at 10–25% of normal limits, double reconciliation cadence (e.g., 15s instead of 30s), set the kill switch to trigger on lower thresholds (e.g., 3 ghost-fill candidates in 15 minutes instead of 10).
 
 
 
@@ -499,7 +515,31 @@ But only websocket is not sufficient .
 
 
 
+**Whether V2 matching latency improved is unknown until measured.** 
+
+
+
+
+
 ## 10.**From Zero to One: Practical Migration Path**
+
+
+
+#### 10.1  Step 1 —  Read official migration docs.
+
+
+
+#### 10.2 Step 2 —  Clone/install `clob-client-v2`
+
+
+
+#### 10.3 Step 3 — **Prepare wallet/credentials.** 
+
+
+
+#### 10.4 Step 4 — Confirm collateral / contract address
+
+
 
 
 
