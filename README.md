@@ -198,9 +198,62 @@ const client = new ClobClient({
 
 ## 2. Where builders and makers most commonly get stuck
 
+The official migration guide is short, the operational pain points it does not enumerate are these.
+
+Actually , most migration bugs are obvious, `initialize client failed`, `endpoint version`,`auth headers are wrong`, `SDK version`
+
+*The expensive bugs are state bugs.*
+
+Below is an flow migration dependency chain 
+
+```
+wallet
+  -> signature type
+    -> collateral token PUSD
+      -> allowance
+        -> order construction
+          -> CLOB acceptance
+            -> off-chain match
+              -> on-chain settlement
+                -> position update
+                  -> reconciliation
+```
+
+
+Let me take some examples step by step  .
+
+* **Wallet Signature type**
+
+  `0=EOA`, `1=POLY_PROXY` (Magic/email), `2=POLY_GNOSIS_SAFE` (browser wallet auto-deploys this — most accounts)
+
+  with `3` referenced in V2 quickstart troubleshooting and inferred to be EIP-1271 smart-contract wallet 
+
+* **Collateral wrapping PUSD**
+
+  API-only traders must wrap `USDC.e` into `PUSD` via the `CollateralOnramp.wrap()` function before any V2 order will settle, and the onramp can revert with `OnlyUnpaused()` if admin-paused.
+
+* **Allowance scopes**
+
+  An old USDC.e approval to the V1 exchange does not authorize the V2 onramp;
+
+  An approval to the onramp does not authorize the V2 exchange to pull pUSD
+
+* **Builder-code attribution drift** 
+
+  if [`builderCode`](https://docs.polymarket.com/v2-migration#what%E2%80%99s-new) env var is empty or wrong, 
+
+  your builder leaderboard will silently show zero and your revenue share will not accrue, with no error
+
+
+
+
 
 
 ## 3.Collateral and Funding Path: USDC.e, pUSD, Wrap / Unwrap
+
+**V2 collateral is [PUSD](https://polygonscan.com/address/0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB).**
+
+
 
 
 
