@@ -451,6 +451,38 @@ But removing nonce does not automatically prove that every ghost-fill-like state
 
 But only websocket is not sufficient .
 
+**A robust bot should not use a single source of truth.**
+
+* **REST polling + WS reconciliation**
+
+  A ideal method is: take WS as primary, REST snapshot on reconnect and every 5–10 minutes during steady-state, REST snapshot every 30s during settlement windows for orders in MATCHED. 
+
+  On-chain log poll every 30s for any order in (MATCHED, MINED, RETRYING).
+
+
+
+* **Error Handling** 
+
+  Whether a builder is profitable depends not only on their strategy but also on the stability of the service infrastructure.
+
+  > * Ws messages can be delayed
+  > * Ws messages can be duplicated
+  > * REST and WS can temporarily disagree
+  > * messages can arrive out of order
+  > * API | Onchain state mismatch
+
+  
+
+  Yesh , tbh ,  make the bot system stable ,and handle all these error is a not easy , it is very heavy .
+
+  
+
+  **<u>Trading infra is heavy because money is heavy.</u>**
+
+  
+
+
+
 
 
 
