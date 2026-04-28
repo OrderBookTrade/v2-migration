@@ -55,7 +55,7 @@ This is a comprehensive guide for migrating from Polymarket CLOB v1 to Polymarke
 
 ## TL;DR
 
-Do not treat CLOB v2 migration as “update the SDK and restart the bot.”
+Do not treat CLOB v2 migration as *update the SDK and restart the bot.*
 
 
 
@@ -253,11 +253,87 @@ Let me take some examples step by step  .
 
 **V2 collateral is [PUSD](https://polygonscan.com/address/0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB).**
 
+There are  three Polygon "USD" tokens must keep straight.
 
+| Token  | Contract Address                           |                              |
+| ------ | ------------------------------------------ | ---------------------------- |
+| USDC.e | 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174 | Polymarket V1 collateral     |
+| USDC   | 0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359 | new Version of circle issued |
+| PUSD   | 0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB | Polymarket V2 collateral.    |
+
+```
+USDC.e balance -> approval -> CollateralOnramp.wrap() 
+
+-> pUSD balance 
+
+-> trade
+-> CollateralOfframp.unwrap()
+```
+
+If your bot still assumes USDC.e is the trading collateral after v2, you are likely wrong.
+
+
+
+* **Why “not enough balance” can happen even when you have funds**
+
+  By understanding our previous path, we will be able to identify exactly where the error from .
+
+  (1) balance is in USDC.e, not pUSD — wrap first
+
+  (2) pUSD allowance to the V2 Exchange (or Neg Risk Exchange) not enough 
+
+  (3) wrapped funds into pUSD, but under the wrong address.
+
+  (4) trading from a different signer / funder than expected.
+
+  
+
+* **`OnlyUnpaused()` reverts**
+
+  The CollateralOnramp can be paused. 
+
+  If a wrap call reverts with `OnlyUnpaused()` , the protocol is in a paused state — do not retry blindly; check operator status
 
 
 
 ## 4.**Wallet, Proxy Wallet, Signature Type, and Relayer**
+
+V2 migration does not change old wallet types(`0` `1` `2`)
+
+```rust
+#[repr(u8)]
+pub enum SignatureType {
+    #[default]
+    Eoa = 0,
+    Proxy = 1,
+    GnosisSafe = 2,
+    /// EIP-1271 smart contract wallet signatures (V2 orders only)
+    Poly1271 = 3,
+}
+```
+
+**`0` = EOA** — signer holds funds. Typical for headless bots that fund their own EOA directly.
+
+**`1` = POLY_PROXY** — Polymarket-custom proxy wallet, used for Magic/email-derived accounts.
+
+**`2` = POLY_GNOSIS_SAFE** — modified Gnosis Safe, used for browser-wallet accounts. **This is the most common live account type today.** 
+
+**`3`** — referenced in V2 quickstart troubleshooting ("0, 1, 2, or 3"). 
+
+Most likely EIP-1271 smart-contract wallet given V2's broader smart-account support, but **the explicit mapping is not in the docs I could retrieve and is needs verification**.
+
+```solidity
+/// @notice See EIP-1271: https://eips.ethereum.org/EIPS/eip-1271
+function isValidSignature(bytes32 _message, bytes memory _signature)
+        public
+        view
+        virtual
+        returns (bytes4 magicValue)
+```
+
+
+
+
 
 
 
